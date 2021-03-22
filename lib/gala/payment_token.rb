@@ -16,13 +16,13 @@ module Gala
     class InvalidSignatureError < StandardError; end;
 
     def initialize(token_attrs)
-      self.version = token_attrs["version"]
-      self.data = token_attrs["data"]
-      self.signature = token_attrs["signature"]
-      headers = token_attrs["header"]
-      self.transaction_id = headers["transactionId"]
-      self.ephemeral_public_key = headers["ephemeralPublicKey"]
-      self.public_key_hash = headers["publicKeyHash"]
+      token_hash = JSON.parse(token_attrs)
+      self.version = token_hash["version"]
+      self.data = token_hash["data"]
+      self.signature = token_hash["signature"]
+      self.transaction_id = token_hash["header"]["transactionId"]
+      self.ephemeral_public_key = token_hash["header"]["ephemeralPublicKey"]
+      self.public_key_hash = token_hash["header"]["publicKeyHash"]
     end
 
     def decrypt(certificate_pem, private_key_pem)
