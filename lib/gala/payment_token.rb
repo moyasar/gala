@@ -10,7 +10,7 @@ module Gala
     APPLE_ROOT_CERT = File.read(File.dirname(__FILE__) + "/resources/AppleRootCA-G3.pem")
 
     attr_accessor :version, :data, :signature, :transaction_id, :ephemeral_public_key,
-      :public_key_hash, :application_data
+      :public_key_hash
 
     class MissingMerchantIdError < StandardError; end;
     class InvalidSignatureError < StandardError; end;
@@ -23,11 +23,10 @@ module Gala
       self.transaction_id = headers["transactionId"]
       self.ephemeral_public_key = headers["ephemeralPublicKey"]
       self.public_key_hash = headers["publicKeyHash"]
-      self.application_data = headers["applicationData"]
     end
 
     def decrypt(certificate_pem, private_key_pem)
-      self.class.validate_signature(signature, ephemeral_public_key, data, transaction_id, application_data)
+      self.class.validate_signature(signature, ephemeral_public_key, data, transaction_id)
 
       certificate = OpenSSL::X509::Certificate.new(certificate_pem)
       merchant_id = self.class.extract_merchant_id(certificate)
@@ -41,7 +40,7 @@ module Gala
 
     class << self
 
-      def validate_signature(signature, ephemeral_public_key, data, transaction_id, application_data)
+      def validate_signature(signature, ephemeral_public_key, data, transaction_id)
         # Ensure that the certificates contain the correct custom OIDs
         intermediate_cert = nil
         leaf_cert = nil
@@ -61,13 +60,12 @@ module Gala
         raise InvalidSignatureError, "Unable to verify a valid chain of trust from signature to root certificate." unless chain_of_trust_verified?(leaf_cert, intermediate_cert, root_cert)
 
         #Ensure that the signature is a valid ECDSA signature
-        unless application_data
-          verification_string = Base64.decode64(ephemeral_public_key) + Base64.decode64(data) + [transaction_id].pack("H*")
-          # verification_string = verification_string + application_data.pack("H*") if application_data
-          store = OpenSSL::X509::Store.new
-          verified = p7.verify([], store, verification_string, OpenSSL::PKCS7::NOVERIFY )
-          raise InvalidSignatureError, "The given signature is not a valid ECDSA signature." unless verified
-        end
+
+        verification_string = Base64.decode64(ephemeral_public_key) + Base64.decode64(data) + [transaction_id].pack("H*")
+
+        store = OpenSSL::X509::Store.new
+        verified = p7.verify([], store, verification_string, OpenSSL::PKCS7::NOVERIFY )
+        raise InvalidSignatureError, "The given signature is not a valid ECDSA signature." unless verified
       end
 
       def chain_of_trust_verified?(leaf_cert, intermediate_cert, root_cert)
