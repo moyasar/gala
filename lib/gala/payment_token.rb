@@ -25,12 +25,12 @@ module Gala
       self.public_key_hash = token_hash["header"]["publicKeyHash"]
     end
 
-    def decrypt(certificate_pem, private_key_pem)
+    def decrypt(certificate_pem, private_key_pem, passphrase)
       self.class.validate_signature(signature, ephemeral_public_key, data, transaction_id)
 
       certificate = OpenSSL::X509::Certificate.new(certificate_pem)
       merchant_id = self.class.extract_merchant_id(certificate)
-      private_key = OpenSSL::PKey::EC.new(private_key_pem)
+      private_key = OpenSSL::PKey::EC.new(private_key_pem, passphrase)
       shared_secret = self.class.generate_shared_secret(private_key, ephemeral_public_key)
       symmetric_key = self.class.generate_symmetric_key(merchant_id, shared_secret)
 
