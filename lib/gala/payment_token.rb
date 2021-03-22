@@ -128,6 +128,7 @@ module Gala
         cipher.auth_data = ''
 
         cipher.update(encrypted_data) + cipher.final
+        JSON.parse(last.to_json)
       end
     end
   end
